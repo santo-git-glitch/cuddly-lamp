@@ -1,0 +1,487 @@
+# Instrucciones para GitHub Copilot — Plantilla TFG/TFM EPS UA
+
+Plantilla LaTeX para TFG/TFM de la Escuela Politécnica Superior (EPS),
+Universidad de Alicante. Versión 2.3.0 (2026).
+
+---
+
+## Reglas críticas
+
+1. **Motor:** SIEMPRE **LuaLaTeX**. Nunca sugieras `pdflatex` ni `xelatex`.
+   LuaLaTeX maneja UTF-8 nativamente; no usar `\usepackage[utf8]{inputenc}`.
+2. **Bibliografía:** **BibLaTeX + Biber**, estilo APA 7. Nunca BibTeX puro ni
+   `\bibliographystyle{}`.
+3. **Código fuente:** Paquete **minted 3.x** con `latexminted`. Usar siempre
+   los entornos predefinidos en `sty/eps-codigo.sty`, nunca `verbatim` ni
+   `lstlisting`.
+4. **Tablas:** Siempre con `booktabs`. Nunca `\hline`.
+5. **Portadas:** Generadas automáticamente con `\generarportada[ambas]`.
+   Nunca crear portadas manualmente.
+6. **Paquetes obsoletos prohibidos:** `utf8x`, `subfigure`, `subfig`, `t1enc`,
+   `ae`, `times`, `mathptmx`.
+
+---
+
+## Estructura del proyecto
+
+```text
+main.tex              → Raíz. Solo estructura (inputs, usepackage, addbibresource).
+configuracion.tex     → Datos del usuario (\EPSsetup{...}).
+referencias.bib       → Bibliografía BibLaTeX.
+cls/eps-tfg.cls       → Clase principal (no modificar).
+cls/eps-metadata.tex  → Etiquetado y metadatos del PDF (no hace falta tocarlo).
+sty/eps-codigo.sty    → Entornos de código (minted).
+sty/eps-componentes.sty → Cargador modular de componentes.
+sty/componentes/      → Módulos: software, telecom, arquitectura, quimica, etc.
+contenido/capitulos/  → Un .tex por capítulo.
+contenido/anexos/     → Anexos y acrónimos.
+contenido/frontmatter/→ Resumen, agradecimientos.
+```
+
+---
+
+## Configuración del documento
+
+```latex
+% En configuracion.tex
+\EPSsetup{
+  titulo      = {Título del trabajo},
+  subtitulo   = {Subtítulo opcional},
+  autor       = {Nombre Apellido1 Apellido2},
+  genero      = m,              % m, f, n (neutro → "Autoría")
+  email       = nombre@alu.ua.es,
+  tutor       = {Dr. Nombre Apellido},
+  tutor-genero = m,
+  tutor-departamento = {Departamento de ...},
+  titulacion  = informatica,    % ver lista completa abajo
+  idioma      = espanol,        % espanol, valenciano, ingles
+  fecha       = {Junio 2026},
+  borrador    = false,          % true: muestra las notas \todo{}
+}
+```
+
+`titulacion` es obligatoria (un valor no válido da un error con la lista de
+valores admitidos); si faltan `titulo`, `autor` o `tutor` hay un aviso. Otras
+claves: `cotutor`, `cotutor-genero`, `cotutor-departamento`, `facultad`,
+`universidad`, `ubicacion`. `optimizar-tikz` es obsoleta y no tiene efecto.
+El `configuracion.tex` distribuido trae `borrador = true`: ponerlo a `false`
+en la versión final. `accesible = true` (por defecto, LaTeX 2025-11 o posterior)
+declara el PDF conforme a PDF/UA-2; una imagen sin `alt={...}` recibe un texto
+automático (su leyenda o «Imagen N») y un aviso.
+
+### Titulaciones disponibles
+
+**Grados (TFG):** `arquitectura`, `arquitectura-tecnica`, `civil`,
+`informatica`, `multimedia`, `quimica`, `robotica`, `teleco`
+
+**Másteres (TFM):** `master-agua`, `master-caminos`, `master-ciberseguridad`,
+`master-ciencia-datos`, `master-edificacion`, `master-geologica`, `master-informatica`,
+`master-materiales`, `master-moviles`, `master-prevencion`, `master-quimica`,
+`master-robotica`, `master-teleco`, `master-web`
+
+---
+
+## Idioma
+
+`idioma` (`espanol`, `valenciano`, `ingles`) cambia el idioma de todo el
+documento (títulos automáticos, bibliografía, separación silábica) y el del
+PDF (`es-ES`, `ca-ES-valencia`, `en-GB`). **No** hay que editar
+`cls/eps-metadata.tex`. La portada se mantiene en español (formato oficial).
+
+---
+
+## Componentes especializados
+
+Activar en `main.tex`:
+
+```latex
+\usepackage[software]{eps-componentes}       % Informática, Multimedia, Robótica
+\usepackage[telecom]{eps-componentes}        % Telecomunicaciones
+\usepackage[arquitectura]{eps-componentes}   % Arquitectura, Civil
+\usepackage[quimica]{eps-componentes}        % Química
+\usepackage[geologia]{eps-componentes}       % Geología
+\usepackage[prevencion]{eps-componentes}     % Prevención de Riesgos
+\usepackage[all]{eps-componentes}            % Todos
+```
+
+### Cajas de aviso (siempre disponibles)
+
+```latex
+\begin{infobox}{Título}    Texto informativo.    \end{infobox}
+\begin{warningbox}{Título} Texto de advertencia. \end{warningbox}
+\begin{dangerbox}{Título}  Texto de peligro.     \end{dangerbox}
+\begin{successbox}{Título} Operación correcta.   \end{successbox}
+\begin{tipbox}{Título}     Consejo útil.         \end{tipbox}
+\begin{notebox}{Título}    Nota adicional.       \end{notebox}
+```
+
+El título es opcional y se admiten opciones de tcolorbox entre corchetes:
+`\begin{infobox}[colback=white]{Título}`.
+
+### Contenedores de contenido (siempre disponibles)
+
+```latex
+\begin{definitionbox}{Término}
+  Descripción del término.
+\end{definitionbox}
+
+\begin{examplebox}[Ejemplo práctico]
+  Caso de uso ilustrativo.
+\end{examplebox}
+```
+
+`examplebox` e `importantbox` llevan el título opcional entre **corchetes**.
+
+### Módulo `[software]`
+
+El contenido de estos entornos no es literal: escapar `\&`, `\#`, `\%`, `\_`,
+`\{`, `\}`, `\$` y separar las líneas con `\\`. Para scripts o JSON copiados
+tal cual, usar `bashcode` / `jsoncode`.
+
+```latex
+% Terminal / consola (título opcional entre corchetes)
+\begin{terminal}[bash]
+\prompt npm install \&\& npm start
+\end{terminal}
+
+% Endpoint REST: {MÉTODO}{/ruta} y descripción con \apidescription
+\begin{apiendpoint}{POST}{/api/v1/login}
+  \apidescription{Autenticación de usuario}
+  \apibody{application/json}{\{"email": "...", "password": "..."\}}
+  \apiresponse{200}{\{"token": "..."\}}
+\end{apiendpoint}
+
+% Árbol de directorios: \dirtreeitem[nivel]{nombre} («/» final = carpeta)
+\begin{dirtreebox}[Estructura del proyecto]
+  \dirtreeitem[0]{proyecto/}
+  \dirtreeitem[1]{src/}
+  \dirtreeitem[2]{main.py}
+  \dirtreeitem[2]{utils.py}
+  \dirtreeitem[1]{tests/}
+\end{dirtreebox}
+```
+
+### Módulo `[telecom]`
+
+```latex
+% Trama de protocolo
+\begin{protocolframe}[32]
+  \framefield{8}{Tipo}
+  \framefield{8}{Longitud}
+  \framefield{16}{Checksum}
+\end{protocolframe}
+```
+
+---
+
+## Entornos de código
+
+Usar siempre los entornos de `sty/eps-codigo.sty`:
+
+```latex
+% Python
+\begin{pythoncode}[title={clasificador.py}]
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier(n_estimators=100)
+clf.fit(X_train, y_train)
+\end{pythoncode}
+
+% JavaScript
+\begin{jscode}[title={index.js}]
+const app = require('./app');
+app.listen(process.env.PORT || 3000);
+\end{jscode}
+
+% C++
+\begin{cppcode}[]
+#include <vector>
+std::vector<int> v = {1, 2, 3};
+\end{cppcode}
+
+% Java
+\begin{javacode}
+public class Main {
+    public static void main(String[] args) {}
+}
+\end{javacode}
+
+% SQL
+\begin{sqlcode}
+SELECT nombre, email FROM usuarios WHERE activo = 1;
+\end{sqlcode}
+
+% JSON
+\begin{jsoncode}[]
+{
+  "nombre": "Juan",
+  "edad": 25,
+  "activo": true
+}
+\end{jsoncode}
+
+% Bash
+\begin{bashcode}[]
+#!/bin/bash
+for f in *.tex; do echo "$f"; done
+\end{bashcode}
+
+% YAML
+\begin{yamlcode}
+version: '3.8'
+services:
+  web:
+    image: nginx:latest
+\end{yamlcode}
+```
+
+**Variantes:** sufijo `NN` sin números de línea (`pythoncodeNN`), `Dark` tema
+oscuro (`pythoncodeDark`) y `DarkNN`. Lista completa (46 lenguajes) en
+`docs/CODIGO_FUENTE.md`; para otros lenguajes, `\begin{codigo}{lenguaje}`.
+
+**Código inline:** `\mintinline{python}{len(lista)}`
+
+**Opciones de bloque:**
+
+```latex
+\begin{pythoncode}[
+  title={mi\_script.py},
+  minted options={firstline=2, lastline=4, highlightlines={3}},
+]
+import os
+ruta = os.getcwd()
+print(ruta)
+print("fin")
+\end{pythoncode}
+```
+
+Las opciones de minted (`firstline`, `lastline`, `highlightlines`...) van
+dentro de `minted options={...}`; los `_` del título se escapan (`\_`). Sin
+números de línea: variante `NN`.
+
+---
+
+## Tablas
+
+```latex
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados de los experimentos.}
+  \label{tab:resultados}
+  \EPScabeceraTabla  % la fila 1 es cabecera (PDF accesible)
+  \begin{tabular}{lrr}
+    \toprule
+    Método       & Precisión & Tiempo (ms) \\
+    \midrule
+    Baseline     & 78.3\%    & 12          \\
+    Propuesto    & 91.7\%    & 18          \\
+    Estado arte  & 89.2\%    & 45          \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+```
+
+---
+
+## Figuras
+
+```latex
+% Figura simple
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth,
+    alt={Diagrama de la arquitectura del sistema}]{recursos/figuras/arquitectura}
+  \caption{Arquitectura del sistema propuesto.}
+  \label{fig:arquitectura}
+\end{figure}
+
+% Subfiguras
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth, alt={Escenario A}]{imagen-a}
+    \caption{Escenario A.}
+    \label{fig:escenario-a}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth, alt={Escenario B}]{imagen-b}
+    \caption{Escenario B.}
+    \label{fig:escenario-b}
+  \end{subfigure}
+  \caption{Comparativa de escenarios.}
+  \label{fig:escenarios}
+\end{figure}
+```
+
+---
+
+## Ecuaciones
+
+```latex
+% Numerada
+\begin{equation}
+  \hat{y} = \sigma\!\left(\sum_{i=1}^{n} w_i x_i + b\right)
+  \label{eq:neurona}
+\end{equation}
+
+% Alineadas
+\begin{align}
+  \nabla_\theta J(\theta) &= \frac{1}{m} X^T (X\theta - y) \\
+                          &= \frac{1}{m} X^T \varepsilon
+  \label{eq:gradiente}
+\end{align}
+
+% Sin numerar
+\begin{equation*}
+  P(A|B) = \frac{P(B|A)\,P(A)}{P(B)}
+\end{equation*}
+```
+
+---
+
+## Bibliografía
+
+```latex
+% En el texto
+\parencite{apellido2024}          % (Apellido, 2024)
+\textcite{apellido2024}           % Apellido (2024)
+\parencite[pp.~10--15]{libro2023} % (Autor, 2023, pp. 10–15)
+
+% En referencias.bib
+@article{apellido2024,
+  author  = {Apellido, Nombre},
+  title   = {Título del artículo},
+  journal = {Nombre de la Revista},
+  year    = {2024},
+  volume  = {10},
+  pages   = {1--20},
+  doi     = {10.xxxx/xxxxx},
+}
+
+@online{web2024,
+  author  = {{Organización}},
+  title   = {Título},
+  url     = {https://ejemplo.com},
+  urldate = {2024-06-01},
+  year    = {2024},
+}
+```
+
+---
+
+## Glosarios y acrónimos
+
+```latex
+% Definir en contenido/anexos/acronimos.tex
+\newacronym{ia}{IA}{Inteligencia Artificial}
+\newacronym{api}{API}{Application Programming Interface}
+
+% Usar en el texto
+\gls{ia}       % Primera vez: "Inteligencia Artificial (IA)"; resto: "IA"
+\acrshort{ia}  % Siempre: "IA"
+\acrlong{ia}   % Siempre: "Inteligencia Artificial"
+```
+
+---
+
+## Referencias cruzadas
+
+Prefijos de etiquetas:
+
+| Prefijo | Elemento |
+| --- | --- |
+| `chap:` | Capítulo |
+| `sec:` | Sección |
+| `subsec:` | Subsección (opcional; también vale `sec:`) |
+| `fig:` | Figura |
+| `tab:` | Tabla |
+| `eq:` | Ecuación |
+| `cod:` | Bloque de código |
+| `teo:` | Teorema |
+| `def:` | Definición |
+| `anexo:` | Anexo |
+
+```latex
+\label{fig:diagrama}
+% ...
+Como se muestra en la Figura~\ref{fig:diagrama}...
+```
+
+---
+
+## Gráficas con PGFPlots
+
+```latex
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      xlabel={Épocas},
+      ylabel={Pérdida},
+      grid=major,
+      legend pos=north east,
+    ]
+      \addplot[blue, thick] coordinates {(1,0.9)(10,0.5)(50,0.2)(100,0.1)};
+      \addlegendentry{Entrenamiento}
+      \addplot[red, dashed] coordinates {(1,0.95)(10,0.6)(50,0.3)(100,0.15)};
+      \addlegendentry{Validación}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Curva de aprendizaje del modelo.}
+  \label{fig:curva-aprendizaje}
+\end{figure}
+```
+
+---
+
+## Compilación
+
+```bash
+make          # Completa: lualatex + biber + 2× lualatex
+make quick    # Solo lualatex (verificar sintaxis)
+make clean    # Limpiar auxiliares, caché _minted/ e informe-revision.md
+```
+
+---
+
+## Antipatrones — qué NO sugerir
+
+- ❌ `pdflatex` o `xelatex`
+- ❌ `\usepackage[utf8]{inputenc}`
+- ❌ `\usepackage{subfigure}` o `subfig`
+- ❌ `\begin{verbatim}` o `lstlisting` para código
+- ❌ `\hline` en tablas
+- ❌ `[H]` en figuras/tablas, `\diagbox` o `tblr` (estropean el PDF accesible)
+- ❌ `tikzpicture` informativo sin `alt={...}`
+- ❌ `\bibliography{}` + `\bibliographystyle{}`
+- ❌ Contenido en `main.tex`
+- ❌ Portadas manuales con TikZ
+- ❌ Paquetes: `utf8x`, `t1enc`, `ae`, `times`, `mathptmx`
+
+---
+
+## Diagnóstico de errores
+
+Pedir siempre las últimas 30 líneas de `main.log`.
+
+| Error | Solución |
+| --- | --- |
+| `TeX capacity exceeded [main memory size=5000000]` | Compilar con LuaLaTeX (Overleaf: Menu → Compiler → LuaLaTeX) |
+| `You must invoke LaTeX with -shell-escape` | Usar `make` o añadir `-shell-escape` |
+| `minted v3+ executable is not installed` | Comprobar `latexminted --version` (viene con TeX Live 2024+); si falta, `tlmgr install minted` o `texlive-latex-extra`. No usar `pip install` (PEP 668); `pipx` solo con MiKTeX |
+| `Citation 'X' undefined` | Ejecutar `make` completo (biber) |
+| `Font ... not found` | Instalar TeX Live completo |
+| `Missing $ inserted` | Encerrar símbolo en `$...$`; escapar `\_` (también en `title={...}`); en `terminal` usar `\prompt` en vez de `$` |
+| `File 'X.sty' not found` | `tlmgr install X` |
+| `Package block Error: Some keys specified on the itemize environment are unknown` | Plantilla antigua con LaTeX 2025-11 o posterior: actualizar la plantilla (`cls/`, `sty/`) |
+| `ignored error Infinite glue shrinkage found in box being split` | Fallo conocido de `longtable` 4.24 (LaTeX 2025-11) al partir una `longtable` entre páginas: error ignorado, el PDF es correcto; no hay que hacer nada |
+
+---
+
+## Archivos de referencia
+
+- `AGENTS.md` — Instrucciones para agentes de código
+- `CLAUDE.md` — Instrucciones para Claude
+- `docs/AI_CONTEXT.md` — Referencia técnica completa
+- `docs/AI_WORKFLOWS.md` — Flujos de trabajo para tareas comunes
+- `docs/COMPONENTES.md` — Catálogo de componentes visuales

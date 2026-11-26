@@ -1,0 +1,175 @@
+name: 🐛 Reporte de Bug
+description: Reporta un error o problema con la plantilla
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias por tomarte el tiempo de reportar este bug! 🙏
+        Por favor, completa la siguiente información para ayudarnos a resolver el problema.
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: ¿Has buscado issues existentes?
+      description: Por favor, verifica que no exista ya un issue similar
+      options:
+        - label: He buscado en los issues existentes y no he encontrado uno similar
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del bug
+      description: Describe de forma clara y concisa cuál es el problema
+      placeholder: "Cuando intento compilar el documento con la titulación X, aparece un error..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: Lista los pasos necesarios para reproducir el error
+      placeholder: |
+        1. Abrir el archivo 'main.tex'
+        2. Cambiar la titulación a '...'
+        3. Compilar con 'make'
+        4. Ver el error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento esperado
+      description: ¿Qué esperabas que ocurriera?
+      placeholder: "El documento debería compilar correctamente y generar el PDF..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamiento actual
+      description: ¿Qué ocurre realmente?
+      placeholder: "En lugar de eso, aparece el siguiente error..."
+    validations:
+      required: true
+
+  - type: input
+    id: template-version
+    attributes:
+      label: Versión de la plantilla
+      description: |
+        Aparece en la cabecera de `main.tex` (línea «Versión:») o en la release que descargaste
+      placeholder: "2.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema Operativo
+      description: ¿En qué sistema operativo estás trabajando?
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS Sonoma (14.x)
+        - macOS Ventura (13.x)
+        - macOS (otra versión)
+        - Ubuntu 24.04
+        - Ubuntu 22.04
+        - Debian
+        - Fedora
+        - Arch Linux
+        - Otra distribución Linux
+        - Overleaf
+        - Otro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tex-distribution
+    attributes:
+      label: Distribución TeX
+      description: ¿Qué distribución de TeX estás usando?
+      options:
+        - TeX Live 2026
+        - TeX Live 2025
+        - TeX Live 2024
+        - TeX Live 2023 o anterior
+        - TeX Live (otra versión)
+        - MiKTeX
+        - MacTeX
+        - Overleaf
+        - Otro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: editor
+    attributes:
+      label: Editor
+      description: ¿Qué editor o IDE estás usando?
+      options:
+        - VS Code + LaTeX Workshop
+        - TeXstudio
+        - Texmaker
+        - Overleaf
+        - TeXShop
+        - Kile
+        - Emacs + AUCTeX
+        - Vim + VimTeX
+        - Otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log de errores
+      description: |
+        Si hay errores de compilación, pega aquí el contenido relevante del archivo .log
+        Puedes encontrarlo en la raíz del proyecto con el nombre 'main.log'
+      render: text
+      placeholder: |
+        ! LaTeX Error: ...
+
+        l.42 ...
+
+  - type: textarea
+    id: mwe
+    attributes:
+      label: Ejemplo mínimo (MWE)
+      description: |
+        Si es posible, proporciona un ejemplo mínimo que reproduzca el error.
+        Esto nos ayuda enormemente a encontrar y solucionar el problema.
+      render: latex
+      placeholder: |
+        \documentclass{eps-tfg}
+        \EPSsetup{
+          titulo = {Test},
+          autor = {Test},
+          titulacion = informatica,
+        }
+        \begin{document}
+        % Código que causa el error
+        \end{document}
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Capturas de pantalla
+      description: Si es relevante, añade capturas de pantalla del error o del PDF mal generado
+      placeholder: Arrastra aquí las imágenes o pega los enlaces
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Información adicional
+      description: Cualquier otro contexto que pueda ser útil para resolver el problema
+      placeholder: "He probado también con... / Esto empezó a pasar después de..."

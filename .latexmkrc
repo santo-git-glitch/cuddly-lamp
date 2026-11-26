@@ -1,0 +1,134 @@
+# ============================================================================
+# Configuración de latexmk para la plantilla TFG/TFM EPS UA
+# ============================================================================
+# 
+# Uso:
+#   latexmk main.tex          - Compilación completa
+#   latexmk -pvc main.tex     - Compilación continua (watch mode)
+#   latexmk -c                - Limpiar archivos auxiliares
+#   latexmk -C                - Limpiar todo (incluido PDF)
+#
+
+# ============================================================================
+# MOTOR DE COMPILACIÓN
+# ============================================================================
+
+# Usar LuaLaTeX para generar PDF
+$pdf_mode = 4;  # 4 = lualatex
+
+# Comando de LuaLaTeX con opciones necesarias
+$lualatex = 'lualatex -shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S';
+
+# ----------------------------------------------------------------------------
+# COMPATIBILIDAD CON OVERLEAF (y con `latexmk -pdf` / `-pdfxe` / `-pdfdvi`)
+# ----------------------------------------------------------------------------
+# Overleaf ignora la línea mágica «% !TeX program = lualatex» y elige el motor
+# desde Menu -> Compiler, pasándolo por línea de órdenes (-pdf, -pdfxe...).
+# Las opciones de la línea de órdenes tienen prioridad sobre $pdf_mode, así que
+# un proyecto importado a Overleaf compilaría con pdfLaTeX o XeLaTeX y fallaría
+# («TeX capacity exceeded», memoria fija de esos motores).
+#
+# Redirigimos esos motores a LuaLaTeX: así el proyecto compila en Overleaf
+# aunque el menú «Compiler» no esté en LuaLaTeX. latexmk detecta que la salida
+# es PDF en vez de XDV/DVI y ajusta la cadena automáticamente.
+# En la compilación normal (pdf_mode = 4) estas variables NO se usan.
+$pdflatex = 'lualatex -shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S';
+$xelatex  = 'lualatex -shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S';
+$latex    = 'lualatex -shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S';
+
+# Máximo número de iteraciones
+$max_repeat = 5;
+
+# ============================================================================
+# BIBLIOGRAFÍA (Biber)
+# ============================================================================
+
+$bibtex_use = 2;  # 2 = usar biber cuando se detecte
+$biber = 'biber --validate-datamodel %O %S';
+
+# ============================================================================
+# GLOSARIOS Y ACRÓNIMOS
+# ============================================================================
+
+# Dependencias personalizadas para makeglossaries
+add_cus_dep('glo', 'gls', 0, 'run_makeglossaries');
+add_cus_dep('acn', 'acr', 0, 'run_makeglossaries');
+
+sub run_makeglossaries {
+    my ($base_name, $path) = fileparse( $_[0] );
+    my @args = ( "-d", $path, $base_name );
+    if ($silent) { unshift @args, "-q"; }
+    return system "makeglossaries", @args;
+}
+
+# Extensiones de glosarios
+push @generated_exts, 'glo', 'gls', 'glg', 'glsdefs';
+push @generated_exts, 'acn', 'acr', 'alg';
+push @generated_exts, 'ist';
+
+# ============================================================================
+# LIMPIEZA DE ARCHIVOS
+# ============================================================================
+
+# Extensiones adicionales a limpiar
+push @generated_exts, 'aux', 'log', 'out', 'toc', 'lof', 'lot';
+push @generated_exts, 'bbl', 'bcf', 'blg', 'run.xml';
+push @generated_exts, 'fls', 'fdb_latexmk', 'synctex.gz', 'xdv';
+push @generated_exts, 'nav', 'snm', 'vrb';  # Beamer
+push @generated_exts, 'pyg', 'listing', 'lol';  # Minted/listings
+push @generated_exts, 'idx', 'ilg', 'ind';  # Índices
+push @generated_exts, 'glstex', 'slg', 'slo', 'sls', 'glog';  # Glosarios (otros)
+push @generated_exts, 'loe', 'tdo', 'xmpi';  # thmtools, todonotes, xmpincl
+
+# Otros archivos a limpiar (latexmk -c y -C)
+$clean_ext = 'synctex.gz synctex.gz(busy) run.xml %R-blx.bib %R-luamml-mathml.html';
+
+# Caché de minted: minted 3 usa el directorio _minted/ (y deja archivos
+# temporales *.data.minted si se interrumpe la compilación); minted 2 usaba
+# _minted-<nombre>/. latexmk solo borra directorios vacíos con $clean_full_ext,
+# así que se eliminan con un hook que solo actúa en la limpieza completa
+# (latexmk -C). Con latexmk -c la caché se conserva a propósito: acelera
+# la siguiente compilación.
+# (add_hook() imprime un aviso de depuración en cada ejecución: se silencia.)
+if (defined &add_hook) {
+    require File::Spec;
+    open(my $nulo, '>', File::Spec->devnull());
+    my $salida_anterior = select($nulo);
+    add_hook('cleanup_extra_full', sub {
+        require File::Path;
+        File::Path::remove_tree('_minted', '_minted-' . $root_filename);
+        unlink glob('*.data.minted');
+        return 0;
+    });
+    select($salida_anterior);
+    close($nulo);
+}
+
+# ============================================================================
+# VISOR DE PDF
+# ============================================================================
+
+# Detectar sistema operativo para el visor
+if ($^O eq 'darwin') {
+    # macOS
+    $pdf_previewer = 'open -a Preview %S';
+} elsif ($^O eq 'MSWin32') {
+    # Windows
+    $pdf_previewer = 'start %S';
+} else {
+    # Linux y otros
+    $pdf_previewer = 'xdg-open %S';
+}
+
+# ============================================================================
+# OTRAS OPCIONES
+# ============================================================================
+
+# Directorio de salida (raíz del proyecto)
+$out_dir = '.';
+
+# No mostrar advertencias menores
+$silence_logfile_warnings = 1;
+
+# Colorear salida si es posible
+$color = 1;

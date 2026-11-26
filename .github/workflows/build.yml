@@ -1,0 +1,566 @@
+name: Build LaTeX Document
+
+# Run name dinámico para mejor visibilidad en la UI
+run-name: >-
+  ${{ github.event_name == 'pull_request'
+      && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title)
+      || format('Build: {0}', github.event.head_commit.message || 'Manual trigger') }}
+
+on:
+  push:
+    branches: [ main ]
+    # Solo compilar si hay cambios relevantes (no solo docs)
+    paths:
+      - '**.tex'
+      - '**.sty'
+      - '**.cls'
+      - '**.bib'
+      - 'recursos/**'
+      - 'contenido/**'
+      - '.latexmkrc'
+      - 'scripts/comprobar-pdf-etiquetado.py'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**.tex'
+      - '**.sty'
+      - '**.cls'
+      - '**.bib'
+      - 'recursos/**'
+      - 'contenido/**'
+      - '.latexmkrc'
+      - 'scripts/comprobar-pdf-etiquetado.py'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Control de concurrencia: cancela builds anteriores del mismo PR/rama.
+# Se usa el número de PR (no el nombre de la rama) para que dos PR de forks
+# distintos con la misma rama (p. ej. «main» o «patch-1») no se cancelen.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. Crear comentario inicial en PR (aparece justo después de la descripción)
+  #    Solo para PR del propio repositorio: en PR desde forks el GITHUB_TOKEN es
+  #    de solo lectura y no puede comentar (el resultado se ve en los checks).
+  init-comment:
+    name: Iniciar comentario en PR
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+    - name: Create or update initial comment
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          // Marcador único para identificar el comentario de este workflow
+          const marker = '<!-- build-latex-bot -->';
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const sha = context.payload.pull_request.head.sha.substring(0, 7);
+
+          const body = `${marker}
+          ## 📄 Compilación del documento
+
+          ⏳ **Compilando...** El documento se está procesando.
+
+          | Detalle | Valor |
+          |---------|-------|
+          | **Commit** | \`${sha}\` |
+          | **Estado** | 🔄 En progreso |
+
+          👉 **[Ver progreso del workflow](${runUrl})**
+
+          ---
+          *Generado automáticamente por GitHub Actions* 🤖
+          `;
+
+          // Buscar comentario existente del bot (con paginación)
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            per_page: 100,
+          });
+          // (también reconoce comentarios antiguos, anteriores al marcador)
+          const botComment = comments.find(c =>
+            c.user?.login === 'github-actions[bot]' &&
+            (c.body?.includes(marker) || c.body?.startsWith('## 📄 Compilación del documento'))
+          );
+
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+  # 2. Compilar documento
+  #    Matriz de compatibilidad: TeX Live más reciente, TeX Live 2025 (LaTeX
+  #    2025-11, el primero con etiquetado completo) y TeX Live 2024 (versión
+  #    mínima documentada), y los tres idiomas de la plantilla. Con TeX Live
+  #    2025 o posterior el PDF declara PDF/UA-2 (accesible = true, por defecto)
+  #    y veraPDF valida el de cada idioma. La configuración principal (español,
+  #    TeX Live más reciente) publica además el PDF para descargar.
+  build:
+    name: Compilar (${{ matrix.nombre }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # No depender de init-comment para que push y workflow_dispatch funcionen
+    if: "!cancelled()"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nombre: principal
+            texlive: latest
+            idioma: espanol
+            lang: es
+            principal: true
+            ua: '2'
+          - nombre: texlive-2025
+            texlive: '2025'
+            idioma: espanol
+            lang: es
+            principal: false
+            ua: '2'
+          - nombre: texlive-2024
+            texlive: '2024'
+            idioma: espanol
+            lang: es
+            principal: false
+            ua: ''
+          - nombre: valenciano
+            texlive: latest
+            idioma: valenciano
+            lang: ca
+            principal: false
+            ua: '2'
+          - nombre: ingles
+            texlive: latest
+            idioma: ingles
+            lang: en
+            principal: false
+            ua: '2'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+
+    # Cambia el idioma en la copia de trabajo del runner (no se sube nada).
+    # La clase ajusta el idioma del PDF (/Lang) a partir de «idioma»; el paso
+    # «Comprobar etiquetado del PDF» verifica que el /Lang resultante coincide.
+    - name: Configurar idioma (${{ matrix.idioma }})
+      if: matrix.idioma != 'espanol'
+      env:
+        IDIOMA: ${{ matrix.idioma }}
+      run: |
+        sed -i -E "s/^([[:space:]]*idioma[[:space:]]*=[[:space:]]*)[a-z]+/\1${IDIOMA}/" configuracion.tex
+        grep -nE "^[[:space:]]*idioma[[:space:]]*=[[:space:]]*${IDIOMA}," configuracion.tex
+
+    - name: Compile LaTeX document
+      uses: xu-cheng/latex-action@v4
+      with:
+        root_file: main.tex
+        texlive_version: ${{ matrix.texlive }}
+        latexmk_use_lualatex: true
+        latexmk_shell_escape: true
+        os: debian
+        extra_system_packages: python3-pip
+        pre_compile: |
+          # Versión real de TeX Live de la imagen (se muestra en el comentario del PR)
+          lualatex --version | head -n 1 | tee texlive-version.txt
+          # TeX Live 2024+ ya incluye latexminted: se usa ese (es lo que tienen
+          # los usuarios). Solo si no funciona se recurre a PyPI, con aviso.
+          if latexminted --version >/dev/null 2>&1; then
+            echo "latexminted de TeX Live: $(latexminted --version | head -n 1)"
+          else
+            echo "::warning::latexminted de TeX Live no disponible; se instala desde PyPI"
+            pip3 install --break-system-packages latexminted || pip3 install latexminted
+          fi
+
+    - name: Configurar Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    # El PDF debe estar etiquetado (\DocumentMetadata en cls/eps-metadata.tex)
+    - name: Comprobar etiquetado del PDF
+      run: |
+        pip install --quiet pypdf
+        python3 scripts/comprobar-pdf-etiquetado.py main.pdf \
+          --titulo "PDF (${{ matrix.nombre }})" \
+          --idioma-esperado "${{ matrix.lang }}" \
+          --ua-esperada "${{ matrix.ua }}" \
+          ${{ matrix.ua == '2' && '--exigir-estructura --linea-base scripts/linea-base-accesibilidad.json' || '' }} \
+          --log main.log
+
+    - name: Resumen de la compilación
+      if: always()
+      env:
+        NOMBRE: ${{ matrix.nombre }}
+        IDIOMA: ${{ matrix.idioma }}
+        TEXLIVE_PEDIDO: ${{ matrix.texlive }}
+        ESTADO: ${{ job.status }}
+      run: |
+        mkdir -p resumen
+        TL="$(cat texlive-version.txt 2>/dev/null || echo 'desconocida')"
+        # Versión de TeX Live («TeX Live 2026») y del núcleo LaTeX («2026-06-01»)
+        TL_CORTA="$(grep -oE 'TeX Live [0-9]{4}' <<< "$TL" || echo "$TL")"
+        KERNEL="$(grep -m1 -oE 'LaTeX2e <[^>]+>' main.log 2>/dev/null | sed -E 's/LaTeX2e <(.*)>/\1/' || true)"
+        {
+          echo "nombre=${NOMBRE}"
+          echo "idioma=${IDIOMA}"
+          echo "texlive_pedido=${TEXLIVE_PEDIDO}"
+          echo "texlive=${TL_CORTA}"
+          echo "kernel=${KERNEL:-?}"
+          echo "estado=${ESTADO}"
+        } > "resumen/${NOMBRE}.txt"
+        cat "resumen/${NOMBRE}.txt"
+        {
+          echo "### Compilación: ${NOMBRE}"
+          echo ""
+          echo "| Idioma | TeX Live | Núcleo LaTeX | Estado |"
+          echo "|---|---|---|---|"
+          echo "| ${IDIOMA} | ${TL_CORTA} | ${KERNEL:-?} | ${ESTADO} |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Subir resumen
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: resumen-${{ matrix.nombre }}
+        path: resumen/
+        retention-days: 7
+
+    - name: Upload PDF artifact
+      if: matrix.principal
+      uses: actions/upload-artifact@v7
+      with:
+        name: TFG-TFM_EPS_UA
+        path: main.pdf
+        retention-days: 90
+
+    # PDF de cada idioma para validarlo con veraPDF (job «accesibilidad»)
+    - name: Subir PDF para veraPDF
+      if: matrix.ua == '2'
+      uses: actions/upload-artifact@v7
+      with:
+        name: pdf-${{ matrix.nombre }}
+        path: main.pdf
+        retention-days: 30
+
+    - name: Upload log on failure
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: build-logs-${{ matrix.nombre }}
+        path: |
+          *.log
+          *.blg
+        retention-days: 7
+
+  # 3. Accesibilidad: veraPDF (PDF/UA-2) valida el PDF de cada idioma, que
+  #    declara PDF/UA-2 (accesible = true). El job falla si alguno no es
+  #    conforme, para detectar en la PR cualquier cambio que estropee la
+  #    accesibilidad (p. ej. una versión nueva de LaTeX o de un paquete).
+  #    También falla si veraPDF arranca pero no da informe de un PDF (p. ej.
+  #    un PDF que no sabe leer). Si veraPDF no se puede descargar o no hay
+  #    PDF que validar (fallo de infraestructura o de compilación), solo avisa.
+  accesibilidad:
+    name: Informe de accesibilidad (veraPDF)
+    runs-on: ubuntu-latest
+    needs: build
+    if: "!cancelled()"
+    timeout-minutes: 20
+    env:
+      # Imagen oficial de veraPDF CLI (https://hub.docker.com/r/verapdf/cli)
+      VERAPDF_IMAGE: verapdf/cli:latest
+      # Configuraciones de la matriz con ua: '2' (deben coincidir)
+      PDF_ESPERADOS: principal texlive-2025 valenciano ingles
+
+    steps:
+    # Un PDF por idioma (pdf/pdf-<configuración>/main.pdf). Si una
+    # compilación falló, falta su PDF: ese fallo ya lo marca su propio job.
+    - name: Descargar PDF
+      continue-on-error: true
+      uses: actions/download-artifact@v8
+      with:
+        pattern: pdf-*
+        path: pdf
+
+    - name: Validar con veraPDF
+      id: verapdf
+      run: |
+        # Una marca por PDF esperado; se quita solo cuando veraPDF da su
+        # informe. Las que quedan salen en el resumen como «sin informe».
+        mkdir -p informe
+        rm -f informe/.fallo-sin-informe
+        for nombre in $PDF_ESPERADOS; do
+          : > "informe/$nombre.sin-informe"
+        done
+        if ! ls pdf/*/main.pdf >/dev/null 2>&1; then
+          echo "::warning::No hay ningún PDF que validar (¿falló la compilación?)"
+          exit 0
+        fi
+        if ! docker pull --quiet "$VERAPDF_IMAGE"; then
+          echo "::warning::No se pudo descargar veraPDF: no se valida la accesibilidad"
+          exit 0
+        fi
+        VERSION="$(docker run --rm "$VERAPDF_IMAGE" --version 2>&1 | head -n 1 || true)"
+        echo "veraPDF: $VERSION"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        for dir in pdf/*/; do
+          nombre="$(basename "$dir")"; nombre="${nombre#pdf-}"
+          [ -f "$dir/main.pdf" ] || continue
+          set +e
+          docker run --rm -v "$PWD/$dir:/data:ro" "$VERAPDF_IMAGE" \
+            --flavour ua2 --format xml /data/main.pdf \
+            > "informe/$nombre.xml" 2> "informe/$nombre.err"
+          CODIGO=$?
+          set -e
+          # El código de salida distingue conforme/no conforme; lo que importa
+          # es que se haya generado el informe.
+          if ! grep -q '<validationReport' "informe/$nombre.xml"; then
+            echo "::warning::veraPDF no pudo validar el PDF «$nombre» (código $CODIGO)"
+            cat "informe/$nombre.err" || true
+            # veraPDF funciona (ya ha dado su versión): el problema es el PDF
+            : > informe/.fallo-sin-informe
+            continue
+          fi
+          rm -f "informe/$nombre.sin-informe"
+          # Informe HTML legible
+          docker run --rm -v "$PWD/$dir:/data:ro" "$VERAPDF_IMAGE" \
+            --flavour ua2 --format html /data/main.pdf > "informe/$nombre.html" || true
+        done
+
+    - name: Resumir y comprobar
+      if: always() && steps.verapdf.outcome == 'success'
+      env:
+        VERSION: ${{ steps.verapdf.outputs.version }}
+      run: |
+        python3 - <<'PY'
+        import glob
+        import os
+        import sys
+        import xml.etree.ElementTree as ET
+
+        def local(tag):
+            return tag.rsplit('}', 1)[-1]
+
+        lineas = ['### ♿ Accesibilidad (veraPDF, PDF/UA-2)', '',
+                  f"- Versión: {os.environ.get('VERSION') or '?'}", '',
+                  '| PDF | Conforme | Reglas superadas | Reglas incumplidas |',
+                  '|---|---|---|---|']
+        detalle = []
+        no_conformes = []
+        informes = sorted(glob.glob('informe/*.xml'))
+        for ruta in informes:
+            nombre = os.path.basename(ruta)[:-4]
+            raiz = ET.parse(ruta).getroot()
+            informe = next((e for e in raiz.iter() if local(e.tag) == 'validationReport'), None)
+            if informe is None:
+                continue
+            detalles = next((e for e in raiz.iter() if local(e.tag) == 'details'), None)
+            conforme = informe.get('isCompliant') == 'true'
+            if not conforme:
+                no_conformes.append(nombre)
+            ok = detalles.get('passedRules', '?') if detalles is not None else '?'
+            ko = detalles.get('failedRules', '?') if detalles is not None else '?'
+            lineas.append(f"| {nombre} | {'✅ sí' if conforme else '❌ no'} | {ok} | {ko} |")
+            fallidas = [r for r in (detalles if detalles is not None else [])
+                        if local(r.tag) == 'rule' and r.get('status') == 'failed']
+            fallidas.sort(key=lambda r: -int(r.get('failedChecks', '0') or 0))
+            if fallidas:
+                detalle += ['', f'#### Reglas incumplidas: {nombre}', '',
+                            '| Cláusula | Test | Fallos | Descripción |', '|---|---|---|---|']
+                for r in fallidas[:25]:
+                    desc = next((d.text or '' for d in r if local(d.tag) == 'description'), '')
+                    desc = ' '.join(desc.split()).replace('|', '\\|')[:160]
+                    detalle.append(f"| {r.get('clause', '')} | {r.get('testNumber', '')} | "
+                                   f"{r.get('failedChecks', '')} | {desc} |")
+        sin_informe = sorted(glob.glob('informe/*.sin-informe'))
+        for ruta in sin_informe:
+            nombre = os.path.basename(ruta)[:-len('.sin-informe')]
+            lineas.append(f'| {nombre} | ⚠️ sin informe | — | — |')
+        if sin_informe:
+            print('::warning::Sin informe de veraPDF para: '
+                  + ', '.join(os.path.basename(r)[:-len('.sin-informe')] for r in sin_informe))
+        lineas += detalle
+        lineas += ['', '> Informe completo en el artefacto **informe-accesibilidad**.']
+        texto = '\n'.join(lineas) + '\n'
+        print(texto)
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+            f.write(texto)
+        if no_conformes:
+            print(f"::error::PDF no conforme con PDF/UA-2 según veraPDF: {', '.join(no_conformes)}")
+            sys.exit(1)
+        if os.path.exists('informe/.fallo-sin-informe'):
+            print('::error::veraPDF no pudo validar alguno de los PDF (ver el paso anterior)')
+            sys.exit(1)
+        PY
+
+    - name: Subir informe de accesibilidad
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: informe-accesibilidad
+        path: informe/
+        if-no-files-found: ignore
+        retention-days: 30
+
+  # 4. Actualizar comentario con resultado final (solo PR del propio repo)
+  comment-pr:
+    name: Actualizar comentario en PR
+    runs-on: ubuntu-latest
+    if: >-
+      always() && !cancelled() &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [init-comment, build]
+
+    steps:
+    - name: Descargar resúmenes de compilación
+      uses: actions/download-artifact@v8
+      continue-on-error: true
+      with:
+        pattern: resumen-*
+        path: resumen
+        merge-multiple: true
+
+    - name: Update PR comment with result
+      uses: actions/github-script@v9
+      env:
+        BUILD_RESULT: ${{ needs.build.result }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const marker = '<!-- build-latex-bot -->';
+          const buildResult = process.env.BUILD_RESULT;
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const prNumber = context.issue.number;
+          const sha = context.payload.pull_request.head.sha.substring(0, 7);
+
+          // Leer los resúmenes de cada configuración de la matriz
+          const orden = ['principal', 'texlive-2025', 'texlive-2024', 'valenciano', 'ingles'];
+          const resumenes = [];
+          if (fs.existsSync('resumen')) {
+            for (const f of fs.readdirSync('resumen')) {
+              const datos = {};
+              for (const linea of fs.readFileSync(path.join('resumen', f), 'utf8').split('\n')) {
+                const i = linea.indexOf('=');
+                if (i > 0) datos[linea.slice(0, i)] = linea.slice(i + 1).trim();
+              }
+              resumenes.push(datos);
+            }
+          }
+          resumenes.sort((a, b) => orden.indexOf(a.nombre) - orden.indexOf(b.nombre));
+          const principal = resumenes.find(r => r.nombre === 'principal');
+
+          const isSuccess = buildResult === 'success';
+          const principalOk = principal ? principal.estado === 'success' : isSuccess;
+          const statusEmoji = isSuccess ? '✅' : (principalOk ? '⚠️' : '❌');
+          const statusText = isSuccess
+            ? 'Compilado correctamente'
+            : (principalOk ? 'Compilado, pero falla alguna configuración de la matriz' : 'Error de compilación');
+
+          let body = `${marker}
+          ## 📄 Compilación del documento
+
+          ${statusEmoji} **${statusText}**
+
+          | Detalle | Valor |
+          |---------|-------|
+          | **Commit** | \`${sha}\` |
+          | **PR** | #${prNumber} |
+          | **TeX Live** | ${principal ? `${principal.texlive} (LaTeX ${principal.kernel})` : 'desconocida'} |
+          `;
+
+          if (resumenes.length) {
+            body += `
+          ### 🧪 Matriz de compatibilidad
+
+          | Configuración | Idioma | TeX Live | Núcleo LaTeX | Resultado |
+          |---|---|---|---|---|
+          `;
+            for (const r of resumenes) {
+              const ok = r.estado === 'success' ? '✅' : '❌';
+              body += `| ${r.nombre} | ${r.idioma} | ${r.texlive} | ${r.kernel} | ${ok} ${r.estado} |\n`;
+            }
+          }
+
+          if (principalOk) {
+            body += `
+          ### 📥 Descargar PDF
+
+          👉 **[Ver workflow y descargar artefactos](${runUrl})**
+
+          En la sección "Artifacts" encontrarás el archivo **TFG-TFM_EPS_UA** con el PDF compilado
+          y **informe-accesibilidad** con la validación de veraPDF (PDF/UA-2) del PDF de cada idioma.
+
+          > **Nota:** **TFG-TFM_EPS_UA** estará disponible durante 90 días; **informe-accesibilidad**, durante 30 días.
+          `;
+          }
+          if (!isSuccess) {
+            body += `
+          ### ⚠️ Error en la compilación
+
+          👉 **[Ver logs del workflow](${runUrl})**
+
+          Revisa los logs (artefactos \`build-logs-*\`) para identificar el problema.
+          `;
+          }
+
+          body += `
+          ---
+          *Generado automáticamente por GitHub Actions* 🤖
+          `;
+
+          // Buscar y actualizar el comentario del bot (con paginación)
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            per_page: 100,
+          });
+          // (también reconoce comentarios antiguos, anteriores al marcador)
+          const botComment = comments.find(c =>
+            c.user?.login === 'github-actions[bot]' &&
+            (c.body?.includes(marker) || c.body?.startsWith('## 📄 Compilación del documento'))
+          );
+
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }

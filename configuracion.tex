@@ -1,0 +1,129 @@
+%% =============================================================================
+%% configuracion.tex
+%% Archivo de configuración global del usuario
+%%
+%% Proyecto: Plantilla TFG/TFM EPS Universidad de Alicante
+%% Autor:    José Manuel Requena Plens
+%% Versión:  2.3.0 (2026/10/03)
+%% =============================================================================
+%
+% Este archivo contiene toda la información personal y del trabajo.
+% Modifica los valores según corresponda a tu situación.
+%
+
+\EPSsetup{
+  %% =====================================================================
+  %% INFORMACIÓN DEL TRABAJO
+  %% =====================================================================
+  
+  % Título del trabajo (obligatorio)
+  titulo = {Título del Trabajo Fin de Grado/Máster},
+  
+  % Subtítulo (opcional, se muestra en portada B/N)
+  subtitulo = {Subtítulo del proyecto},
+  
+  %% =====================================================================
+  %% INFORMACIÓN DEL AUTOR
+  %% =====================================================================
+  
+  % Nombre completo del autor (obligatorio)
+  autor = {Nombre Apellido1 Apellido2},
+  
+  % Género para etiquetas: m (masculino), f (femenino), n (neutro)
+  genero = m,
+  
+  % Email institucional
+  email = nombre@alu.ua.es,
+  
+  %% =====================================================================
+  %% INFORMACIÓN DEL TUTOR/ES
+  %% =====================================================================
+  
+  % Tutor principal (obligatorio)
+  tutor = {Dr./Dra. Nombre Apellido1 Apellido2},
+  tutor-genero = m,  % m = masculino, f = femenino, n = neutro
+  tutor-departamento = {Departamento de ejemplo},
+  
+  % Co-tutor (opcional - descomentar si hay cotutor)
+  % cotutor = {Dr./Dra. Nombre Apellido1 Apellido2},
+  % cotutor-genero = m,  % m = masculino, f = femenino, n = neutro
+  % cotutor-departamento = {Departamento del cotutor},
+  
+  %% =====================================================================
+  %% TITULACIÓN
+  %% =====================================================================
+  % 
+  % Grados disponibles:
+  %   teleco            - Ingeniería en Sonido e Imagen en Telecomunicación
+  %   civil             - Ingeniería Civil
+  %   quimica           - Ingeniería Química
+  %   informatica       - Ingeniería Informática
+  %   multimedia        - Ingeniería Multimedia
+  %   arquitectura-tecnica - Arquitectura Técnica
+  %   arquitectura      - Arquitectura
+  %   robotica          - Ingeniería Robótica
+  %
+  % Másteres disponibles:
+  %   master-teleco     - Ingeniería de Telecomunicación
+  %   master-caminos    - Caminos, Canales y Puertos
+  %   master-edificacion - Gestión de la Edificación
+  %   master-web        - Desarrollo de Aplicaciones y Servicios Web
+  %   master-materiales - Materiales, Agua y Terreno
+  %   master-informatica - Ingeniería Informática
+  %   master-robotica   - Automática y Robótica
+  %   master-prevencion - Prevención de Riesgos Laborales
+  %   master-agua       - Gestión Sostenible y Tecnologías del Agua
+  %   master-moviles    - Software para Dispositivos Móviles
+  %   master-quimica    - Ingeniería Química
+  %   master-ciberseguridad - Ciberseguridad
+  %   master-geologica  - Ingeniería Geológica
+  %   master-ciencia-datos - Ciencia de Datos
+  %
+  titulacion = teleco,
+  
+  %% =====================================================================
+  %% IDIOMA DEL DOCUMENTO
+  %% =====================================================================
+  %
+  % Idioma principal del trabajo. Afecta a:
+  % - Títulos de secciones automáticas (Tabla, Figura, Bibliografía, etc.)
+  % - Formato de citas y bibliografía
+  % - Metadatos del PDF
+  %
+  % Valores disponibles:
+  %   espanol    - Español (predeterminado)
+  %   valenciano - Valenciano/Catalán
+  %   ingles     - Inglés
+  %
+  % El idioma del PDF (metadatos y accesibilidad) se ajusta automáticamente:
+  % no hace falta tocar 'cls/eps-metadata.tex'.
+  % La portada se mantiene en español (formato oficial de la EPS).
+  %
+  idioma = espanol,
+  
+  %% =====================================================================
+  %% INFORMACIÓN INSTITUCIONAL (normalmente no hay que cambiar)
+  %% =====================================================================
+  
+  facultad = {Escuela Politécnica Superior},
+  universidad = {Universidad de Alicante},
+  ubicacion = {Alicante},
+  
+  %% =====================================================================
+  %% OPCIONES ADICIONALES
+  %% =====================================================================
+  
+  % Fecha personalizada (si se omite, usa la fecha actual)
+  % fecha = {Junio 2026},
+  
+  % Modo borrador: muestra las notas \todo y \missingfigure.
+  % Ponlo a false para generar la versión final.
+  borrador = true,
+
+  % PDF accesible (PDF/UA-2): el PDF se declara conforme a la norma de
+  % accesibilidad. A cada imagen sin texto alternativo se le pone uno
+  % automático (su leyenda o «Imagen N») y se avisa: escribe tú la
+  % descripción con alt={...} (ver docs/ACCESIBILIDAD.md). Requiere TeX Live
+  % 2025 actualizado o posterior; con versiones anteriores solo avisa.
+  accesible = true,
+}

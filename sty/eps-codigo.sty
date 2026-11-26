@@ -1,0 +1,331 @@
+%% eps-codigo.sty
+%% Estilos de código estilo VS Code (basado en minted)
+%%
+%% Proyecto: Plantilla TFG/TFM EPS Universidad de Alicante
+%% Autor:    José Manuel Requena Plens
+%% Enlace:   https://github.com/jmrplens/TFG-TFM_EPS
+%% Licencia: MIT
+%% Versión:  2.3.0 (2026/10/03)
+%%
+%% -----------------------------------------------------------------------------
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{eps-codigo}[2026/10/03 v2.3.0 Estilos de código TFG/TFM EPS UA]
+
+%% NOTA IMPORTANTE:
+%% Este paquete depende de 'minted', que a su vez requiere Python y Pygments instalado.
+%% Es OBLIGATORIO compilar con la opción -shell-escape habilitada.
+%% Ejemplo: lualatex -shell-escape main.tex
+
+%% Cargar paquetes necesarios
+\RequirePackage{tcolorbox}
+\tcbuselibrary{minted,skins,breakable,theorems}
+\RequirePackage{minted}
+\RequirePackage{fontawesome5}
+
+%% Selector de textos según el idioma del documento (lo define la clase;
+%% si no existe, se usan los textos en español).
+%% Uso: \EPSsegunidioma{español}{valenciano}{inglés}
+\providecommand\EPSsegunidioma[3]{#1}
+
+%% Nombres de minted/listings según el idioma del documento
+\renewcommand{\listoflistingscaption}{%
+  \EPSsegunidioma{Índice de Códigos}{Índex de Codis}{List of Listings}}
+\renewcommand{\listingscaption}{\EPSsegunidioma{Código}{Codi}{Listing}}
+
+%% Numerar listings por capítulo (igual que figuras y tablas)
+\AtBeginDocument{%
+  \@ifundefined{c@chapter}{}{%
+    \counterwithin{listing}{chapter}%
+  }%
+}
+
+%% Definir comando para índice de códigos
+\newcommand{\indiceCodigos}{\listoflistings}
+
+%% =============================================================================
+%% COLORES - VS CODE
+%% =============================================================================
+% VS Code Light
+\definecolor{vscode-bg}{HTML}{FFFFFF}
+\definecolor{vscode-border}{HTML}{E5E5E5}
+\definecolor{vscode-titlebar}{HTML}{F3F3F3}
+\definecolor{vscode-titletext}{HTML}{616161}
+\definecolor{vscode-linenos}{HTML}{237893}
+% macOS Traffic Lights
+\definecolor{macos-red}{HTML}{FF5F56}
+\definecolor{macos-yellow}{HTML}{FFBD2E}
+\definecolor{macos-green}{HTML}{27C93F}
+
+% VS Code Dark
+\definecolor{vscode-dark-bg}{HTML}{1E1E1E}
+\definecolor{vscode-dark-border}{HTML}{3C3C3C}
+\definecolor{vscode-dark-titlebar}{HTML}{252526}
+\definecolor{vscode-dark-text}{HTML}{CCCCCC}
+\definecolor{vscode-dark-linenos}{HTML}{CCCCCC}
+
+%% =============================================================================
+%% CONFIGURACIÓN GLOBAL DE MINTED
+%% =============================================================================
+\setminted{
+  fontsize=\small,
+  breaklines=true,
+  breakanywhere=true,
+  tabsize=2,
+  frame=none,
+  autogobble=true,
+}
+% Código en línea (\mintinline) sin cortes en cualquier carácter: los puntos
+% de corte usan modo matemático y, en el PDF etiquetado, cada carácter acaba
+% como una fórmula vacía. Se sigue cortando en los espacios (breaklines).
+\setmintedinline{breakanywhere=false}
+% Espacios del código en el PDF etiquetado. El lector de pantalla solo recibe
+% un espacio donde el espacio del código queda pegado a una letra; junto a los
+% cambios de color del resaltado se perdían («deff(x):» en vez de «def f(x):»).
+% Cada espacio del código inserta un espacio real de anchura neta cero
+% (\pdffakespace) y el espacio visible no genera otro. El aspecto no cambia.
+\ExplSyntaxOn
+\cs_new_protected:Npn \eps@codigo@espacio
+  {
+    \tag_if_active:TF
+      { \pdffakespace \tag_spacechar_off: \ \tag_spacechar_on: }
+      { \ }
+  }
+\ExplSyntaxOff
+\IfFormatAtLeastT{2025-11-01}{%
+  \fvset{formatcom*={\let\FV@Space\eps@codigo@espacio}}}
+
+%% =============================================================================
+%% ESTILO BASE VS CODE LIGHT
+%% =============================================================================
+\tcbset{
+  vscode-light-base/.style={
+    enhanced,
+    breakable,
+    colback=vscode-bg,
+    colframe=vscode-border,
+    coltitle=vscode-titletext,
+    colbacktitle=vscode-titlebar,
+    arc=6pt,
+    boxrule=0.5pt,
+    left=6pt,
+    right=6pt,
+    top=6pt,
+    bottom=6pt,
+    listing only,
+    listing engine=minted,
+    fonttitle=\small\ttfamily\bfseries,
+    toptitle=4pt,
+    bottomtitle=4pt,
+    drop shadow=black!05,
+    halign title=center,
+  },
+  vscode-light-linenos/.style={
+    vscode-light-base,
+    before upper={\setminted{linenos,numbersep=6pt,fontsize=\small,xleftmargin=1.5em}\renewcommand{\theFancyVerbLine}{\ttfamily\textcolor{vscode-linenos}{\scriptsize\arabic{FancyVerbLine}}}},
+  },
+  vscode-light-nolinenos/.style={
+    vscode-light-base,
+    before upper={\setminted{linenos=false,fontsize=\small,xleftmargin=0pt}},
+  },
+}
+
+%% =============================================================================
+%% ESTILO BASE VS CODE DARK
+%% =============================================================================
+\tcbset{
+  vscode-dark-base/.style={
+    enhanced,
+    breakable,
+    colback=vscode-dark-bg,
+    colframe=vscode-dark-border,
+    coltitle=vscode-dark-text,
+    colbacktitle=vscode-dark-titlebar,
+    arc=6pt,
+    boxrule=0.5pt,
+    left=6pt,
+    right=6pt,
+    top=6pt,
+    bottom=6pt,
+    listing only,
+    listing engine=minted,
+    fonttitle=\small\ttfamily\bfseries,
+    toptitle=4pt,
+    bottomtitle=4pt,
+    drop shadow=black!25,
+    halign title=center,
+  },
+  vscode-dark-linenos/.style={
+    vscode-dark-base,
+    before upper={\setminted{linenos,numbersep=6pt,fontsize=\small,xleftmargin=1.5em,style=monokai}\renewcommand{\theFancyVerbLine}{\ttfamily\textcolor{vscode-dark-linenos}{\scriptsize\arabic{FancyVerbLine}}}},
+  },
+  vscode-dark-nolinenos/.style={
+    vscode-dark-base,
+    before upper={\setminted{linenos=false,fontsize=\small,style=monokai,xleftmargin=0pt}},
+  },
+}
+
+%% =============================================================================
+%% ESTILO SIMPLE (MINIMALISTA)
+%% =============================================================================
+\tcbset{
+  simple-base/.style={
+    enhanced,
+    breakable,
+    colback=white,
+    colframe=black!30,
+    coltitle=black,
+    colbacktitle=white,
+    arc=0pt,
+    boxrule=0.4pt,
+    left=6pt,
+    right=6pt,
+    top=10pt,
+    bottom=4pt,
+    listing only,
+    listing engine=minted,
+    fonttitle=\small\sffamily\bfseries,
+    toptitle=3pt,
+    bottomtitle=3pt,
+    halign title=left,
+    attach boxed title to top left={yshift=-\tcboxedtitleheight/2, xshift=6pt},
+    boxed title style={colback=white, colframe=white, boxrule=0pt, arc=0pt},
+  },
+  simple-linenos/.style={
+    simple-base,
+    before upper={\setminted{linenos,numbersep=6pt,fontsize=\small,xleftmargin=1.5em}\renewcommand{\theFancyVerbLine}{\ttfamily\textcolor{black!60}{\scriptsize\arabic{FancyVerbLine}}}},
+  },
+  simple-nolinenos/.style={
+    simple-base,
+    before upper={\setminted{linenos=false,fontsize=\small,xleftmargin=0pt}},
+  },
+}
+
+%% =============================================================================
+%% ENTRADA EN EL ÍNDICE DE CÓDIGOS
+%% =============================================================================
+%% Los entornos por lenguaje usan como título y entrada del índice la
+%% etiqueta del lenguaje (p. ej. «Python»). Si el usuario indica su propio
+%% title={...}, la entrada del índice pasa a ser ese título (salvo que también
+%% indique list entry={...}).
+\tcbset{
+  % #1: título por defecto, #2: texto por defecto de la entrada del índice
+  eps-code-defaults/.code 2 args={%
+    \tcbset{title={#1},list entry={\protect\numberline{\thelisting}#2}}%
+    \let\eps@code@titulo\kvtcb@title
+    \let\eps@code@entrada\kvtcb@listentry
+  },
+  eps-code-entry-from-title/.code={%
+    \ifx\kvtcb@title\eps@code@titulo\else
+      \ifx\kvtcb@listentry\eps@code@entrada
+        % Misma forma que la entrada por defecto, con el título del usuario
+        \begingroup
+        \edef\eps@tempa{\endgroup
+          \noexpand\tcbset{list entry={%
+            \noexpand\protect\noexpand\numberline{\noexpand\thelisting}%
+            \unexpanded\expandafter{\kvtcb@title}}}}%
+        \eps@tempa
+      \fi
+    \fi
+  },
+}
+
+%% Entorno Genérico Simple
+%% Uso: \begin{codigosimple}[opciones extra]{lenguaje}{Titulo}
+\newtcblisting[use counter=listing, list inside=lol, list type=listing]{codigosimple}[3][]{simple-linenos,minted language=#2,title={#3},list entry={\protect\numberline{\thelisting}#3},#1}
+\newtcblisting[use counter=listing, list inside=lol, list type=listing]{codigosimpleNN}[3][]{simple-nolinenos,minted language=#2,title={#3},list entry={\protect\numberline{\thelisting}#3},#1}
+
+%% =============================================================================
+%% ENTORNOS POR LENGUAJE
+%% =============================================================================
+%% Cada lenguaje define cuatro entornos con la misma firma [opciones]:
+%%   <nombre>code        VS Code claro con números de línea
+%%   <nombre>codeNN      VS Code claro sin números de línea
+%%   <nombre>codeDark    VS Code oscuro con números de línea
+%%   <nombre>codeDarkNN  VS Code oscuro sin números de línea
+%% Las opciones son claves de tcolorbox (title=..., minted options={...}, ...).
+
+%% Define un entorno de código.
+%% #1: nombre del entorno, #2: estilo, #3: lenguaje minted, #4: icono, #5: etiqueta
+%% El argumento opcional se declara como `!O{}': solo se reconoce si el '['
+%% va pegado a \begin{...}. Así nunca se inspecciona la primera línea del
+%% código (con [1][] una primera línea como '#include <x>' o '#!/bin/bash'
+%% provocaba «Illegal parameter number in definition of \next»).
+\newcommand\eps@definircodigo[5]{%
+  \DeclareTCBListing[use counter=listing, list inside=lol, list type=listing]{#1}{ !O{} }{%
+    #2,minted language=#3,%
+    eps-code-defaults={\faIcon{#4}~~#5}{#5},%
+    ##1,%
+    eps-code-entry-from-title%
+  }%
+}
+
+%% Declara las cuatro variantes de un lenguaje.
+%% \eps@lenguaje{prefijo}{lenguaje minted}{icono}{etiqueta}
+\newcommand\eps@lenguaje[4]{%
+  \eps@definircodigo{#1code}{vscode-light-linenos}{#2}{#3}{#4}%
+  \eps@definircodigo{#1codeNN}{vscode-light-nolinenos}{#2}{#3}{#4}%
+  \eps@definircodigo{#1codeDark}{vscode-dark-linenos}{#2}{#3}{#4}%
+  \eps@definircodigo{#1codeDarkNN}{vscode-dark-nolinenos}{#2}{#3}{#4}%
+}
+
+%% Tabla de lenguajes: \eps@lenguaje{prefijo}{lenguaje minted}{icono}{etiqueta}
+\eps@lenguaje{python}{python}{python}{Python}% Python
+\eps@lenguaje{js}{javascript}{js-square}{JavaScript}% JavaScript
+\eps@lenguaje{ts}{typescript}{js-square}{TypeScript}% TypeScript
+\eps@lenguaje{sql}{sql}{database}{SQL}% SQL
+\eps@lenguaje{c}{c}{copyright}{C}% C
+\eps@lenguaje{cpp}{cpp}{copyright}{C++}% C++
+\eps@lenguaje{csharp}{csharp}{microsoft}{C\#}% C#
+\eps@lenguaje{java}{java}{java}{Java}% Java
+\eps@lenguaje{kotlin}{kotlin}{android}{Kotlin}% Kotlin
+\eps@lenguaje{swift}{swift}{apple}{Swift}% Swift
+\eps@lenguaje{go}{go}{google}{Go}% Go
+\eps@lenguaje{rust}{rust}{rust}{Rust}% Rust
+\eps@lenguaje{php}{php}{php}{PHP}% PHP
+\eps@lenguaje{ruby}{ruby}{gem}{Ruby}% Ruby
+\eps@lenguaje{r}{r}{r-project}{R}% R
+\eps@lenguaje{html}{html}{html5}{HTML}% HTML
+\eps@lenguaje{css}{css}{css3-alt}{CSS}% CSS
+\eps@lenguaje{sass}{sass}{sass}{SASS}% SASS/SCSS
+\eps@lenguaje{json}{json}{code}{JSON}% JSON
+\eps@lenguaje{xml}{xml}{code}{XML}% XML
+\eps@lenguaje{yaml}{yaml}{file-code}{YAML}% YAML
+\eps@lenguaje{md}{markdown}{markdown}{Markdown}% Markdown
+\eps@lenguaje{latex}{latex}{file-alt}{\LaTeX}% LaTeX
+\eps@lenguaje{bash}{bash}{terminal}{Bash}% Bash/Shell
+\eps@lenguaje{ps}{powershell}{terminal}{PowerShell}% PowerShell
+\eps@lenguaje{docker}{dockerfile}{docker}{Dockerfile}% Docker
+\eps@lenguaje{matlab}{matlab}{chart-line}{MATLAB}% Matlab
+\eps@lenguaje{scala}{scala}{fire}{Scala}% Scala
+\eps@lenguaje{lualang}{lua}{moon}{Lua}% Lua (nombrado lualangcode para evitar conflicto con paquete luacode)
+\eps@lenguaje{perl}{perl}{code}{Perl}% Perl
+\eps@lenguaje{haskell}{haskell}{code}{Haskell}% Haskell
+\eps@lenguaje{make}{makefile}{cogs}{Makefile}% Makefile
+\eps@lenguaje{ini}{ini}{sliders-h}{Config}% INI/Config
+\eps@lenguaje{toml}{toml}{file-code}{TOML}% TOML
+\eps@lenguaje{diff}{diff}{code-branch}{Diff}% Diff
+\eps@lenguaje{git}{bash}{git-alt}{Git}% Git
+\eps@lenguaje{nginx}{nginx}{server}{Nginx}% Nginx
+\eps@lenguaje{apache}{apacheconf}{server}{Apache}% Apache
+\eps@lenguaje{text}{text}{file-alt}{Text}% Texto plano (para MikroTik y otros)
+\eps@lenguaje{mikrotik}{bash}{network-wired}{MikroTik}% MikroTik (usando sintaxis similar a bash)
+\eps@lenguaje{asm}{nasm}{microchip}{Assembly}% Assembler/ASM
+\eps@lenguaje{prolog}{prolog}{brain}{Prolog}% Prolog
+\eps@lenguaje{fortran}{fortran}{calculator}{Fortran}% Fortran
+\eps@lenguaje{vhdl}{vhdl}{microchip}{VHDL}% VHDL
+\eps@lenguaje{verilog}{verilog}{microchip}{Verilog}% Verilog
+\eps@lenguaje{tex}{tex}{file-alt}{TeX}% TeX
+
+%% =============================================================================
+%% ENTORNOS GENÉRICOS PARA CUALQUIER LENGUAJE
+%% =============================================================================
+
+% Genérico Light
+\newtcblisting[use counter=listing, list inside=lol, list type=listing]{codigo}[2][]{vscode-light-linenos,minted language=#2,eps-code-defaults={\faIcon{code}~~#2}{#2},#1,eps-code-entry-from-title}
+\newtcblisting[use counter=listing, list inside=lol, list type=listing]{codigoNN}[2][]{vscode-light-nolinenos,minted language=#2,eps-code-defaults={\faIcon{code}~~#2}{#2},#1,eps-code-entry-from-title}
+
+% Genérico Dark
+\newtcblisting[use counter=listing, list inside=lol, list type=listing]{codigoDark}[2][]{vscode-dark-linenos,minted language=#2,eps-code-defaults={\faIcon{code}~~#2}{#2},#1,eps-code-entry-from-title}
+\newtcblisting[use counter=listing, list inside=lol, list type=listing]{codigoDarkNN}[2][]{vscode-dark-nolinenos,minted language=#2,eps-code-defaults={\faIcon{code}~~#2}{#2},#1,eps-code-entry-from-title}
+
+\endinput

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentación de LaTeX
+    url: https://www.overleaf.com/learn
+    about: Aprende LaTeX con los tutoriales de Overleaf (incluye español)
+  - name: 💬 Stack Exchange (TeX)
+    url: https://tex.stackexchange.com/
+    about: Comunidad de preguntas y respuestas sobre LaTeX
+  - name: 💖 Apoya el proyecto en GitHub Sponsors
+    url: https://github.com/sponsors/jmrplens
+    about: Si la plantilla te ha sido útil, considera apoyar al desarrollador
+  - name: ☕ Apoya el proyecto en Ko-fi
+    url: https://ko-fi.com/jmrplens
+    about: Si lo prefieres, apoya al desarrollador con una donación en Ko-fi

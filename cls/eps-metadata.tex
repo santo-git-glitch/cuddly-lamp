@@ -1,0 +1,56 @@
+% =============================================================================
+% METADATOS Y ESTÁNDARES DEL DOCUMENTO (PDF etiquetado y metadatos)
+% =============================================================================
+% Este archivo configura el etiquetado de accesibilidad y los metadatos PDF.
+% Se carga ANTES de \documentclass para asegurar que el motor PDF se
+% inicialice correctamente.
+
+% -----------------------------------------------------------------------------
+% COMPROBACIÓN DEL MOTOR: la plantilla SOLO funciona con LuaLaTeX
+% -----------------------------------------------------------------------------
+% Con pdfLaTeX o XeLaTeX el documento falla más adelante con errores confusos
+% (típicamente «TeX capacity exceeded, sorry [main memory size=5000000]»,
+% porque esos motores tienen memoria fija y el preámbulo de esta plantilla no
+% cabe en ella). Abortamos aquí con un mensaje claro.
+\ifdefined\directlua\else
+  \newlinechar=`\^^J
+  \errmessage{^^J%
+  ============================================================^^J%
+   ESTA PLANTILLA REQUIERE LuaLaTeX (motor actual: no es LuaTeX)^^J%
+  ============================================================^^J%
+   * Overleaf: Menu -> Settings -> Compiler -> LuaLaTeX^^J%
+     (Overleaf ignora la linea magica "!TeX program = lualatex")^^J%
+   * Local:    make    o    lualatex -shell-escape main.tex^^J%
+   * latexmk:  latexmk main.tex   (usa .latexmkrc del proyecto)^^J%
+  ^^J%
+   Mas informacion: docs/OVERLEAF.md^^J%
+  ============================================================^^J}%
+  \csname @@end\endcsname
+\fi
+
+% --- Etiquetado (tagging) para accesibilidad ---
+% Genera un PDF etiquetado: árbol de estructura (títulos, párrafos, listas,
+% figuras con texto alternativo, tablas...) que usan los lectores de pantalla.
+%  * LaTeX 2025-11 o posterior (TeX Live 2025 actualizado, 2026): 'tagging=on'
+%    activa todos los módulos de etiquetado. Los ajustes de compatibilidad con
+%    enumitem, chemformula y threeparttable están en cls/eps-tfg.cls
+%    (sección «Compatibilidad con el etiquetado»).
+%  * Versiones anteriores (TeX Live 2024): 'phase-I', etiquetado básico. Las
+%    fases más completas de esas versiones no son compatibles con la plantilla.
+%
+% --- Estándar PDF ---
+% NO se declara 'pdfstandard=ua-2': la conformidad PDF/UA-2 todavía no se
+% alcanza con esta base (KOMA-Script y varios paquetes aún no son compatibles
+% con el etiquetado) y declararlo sería una afirmación falsa en los metadatos.
+% Ver docs/ACCESIBILIDAD.md.
+%
+% --- Versión PDF ---
+% PDF 2.0, la versión recomendada para PDF etiquetado.
+%
+% --- Idioma ---
+% 'lang' es solo el valor inicial: la clase lo sustituye por el idioma
+% configurado con 'idioma' en configuracion.tex (es-ES, ca-ES-valencia o
+% en-GB), así que NO hace falta modificarlo al cambiar de idioma.
+\IfFormatAtLeastTF{2025-11-01}
+  {\DocumentMetadata{tagging=on, pdfversion=2.0, lang=es-ES}}
+  {\DocumentMetadata{testphase=phase-I, pdfversion=2.0, lang=es-ES}}

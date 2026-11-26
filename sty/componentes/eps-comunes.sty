@@ -1,0 +1,414 @@
+%% eps-comunes.sty
+%% Componentes comunes para todas las disciplinas
+%%
+%% Proyecto: Plantilla TFG/TFM EPS Universidad de Alicante
+%% Autor:    José Manuel Requena Plens
+%% Enlace:   https://github.com/jmrplens/TFG-TFM_EPS
+%% Licencia: MIT
+%% Versión:  2.3.0 (2026/10/03)
+%%
+%% Parte de eps-componentes.sty
+%% -----------------------------------------------------------------------------
+\ProvidesFile{eps-comunes.sty}[2026/10/03 v2.3.0 Componentes comunes EPS UA]
+
+% Selector de textos según el idioma del documento (lo define la clase;
+% si no existe, se usan los textos en español).
+% Uso: \EPSsegunidioma{español}{valenciano}{inglés}
+\providecommand\EPSsegunidioma[3]{#1}
+
+% ============================================================================
+% CAJAS DE INFORMACIÓN
+% ============================================================================
+
+% Todas aceptan un título opcional entre llaves y opciones de tcolorbox
+% entre corchetes (ambos opcionales):
+%   \begin{infobox} ... \end{infobox}
+%   \begin{infobox}[opciones] ... \end{infobox}
+%   \begin{infobox}{Título} ... \end{infobox}
+%   \begin{infobox}[opciones]{Título} ... \end{infobox}
+% El título solo se reconoce si la llave va pegada a \begin{...} (o a las
+% opciones): un grupo {...} al principio de la línea siguiente forma parte
+% del cuerpo. Equivale a la especificación de argumentos `O{} !g`, pero sin
+% depender del paquete obsoleto xparse.
+
+\ExplSyntaxOn
+% #1: color, #2: icono, #3: opciones de tcolorbox
+\cs_new_protected:Npn \__eps_alerta:nnn #1#2#3
+  {
+    \peek_catcode:NTF \c_group_begin_token
+      { \__eps_alerta_titulo:nnnn {#1} {#2} {#3} }
+      { \__eps_alerta_caja:nnnn {#1} {#2} {#3} { } }
+  }
+% #4: título
+\cs_new_protected:Npn \__eps_alerta_titulo:nnnn #1#2#3#4
+  { \__eps_alerta_caja:nnnn {#1} {#2} {#3} { \textbf {#4} \par \smallskip } }
+\cs_new_protected:Npn \__eps_alerta_caja:nnnn #1#2#3#4
+  {
+    \begin{tcolorbox}
+      [
+        eps-alert = #1 ,
+        before~upper = { \textcolor {#1} {#2} \hspace {8pt} #4 } ,
+        #3
+      ]
+  }
+% \eps@nuevaalerta{entorno}{color}{icono}
+\cs_new_protected:Npn \eps@nuevaalerta #1#2#3
+  {
+    \NewDocumentEnvironment {#1} { O{} }
+      { \__eps_alerta:nnn {#2} {#3} {##1} }
+      { \end{tcolorbox} }
+  }
+\ExplSyntaxOff
+
+% Caja de información general
+% Uso: \begin{infobox}{Título opcional} Texto \end{infobox}
+\eps@nuevaalerta{infobox}{eps-info}{\faInfoCircle}
+
+% Caja de éxito/correcto
+% Uso: \begin{successbox}{Título opcional} Texto \end{successbox}
+\eps@nuevaalerta{successbox}{eps-success}{\faCheckCircle}
+
+% Caja de advertencia
+% Uso: \begin{warningbox}{Título opcional} Texto \end{warningbox}
+\eps@nuevaalerta{warningbox}{eps-warning}{\faExclamationTriangle}
+
+% Caja de peligro/error
+% Uso: \begin{dangerbox}{Título opcional} Texto \end{dangerbox}
+\eps@nuevaalerta{dangerbox}{eps-danger}{\faTimesCircle}
+
+% Caja de consejo/tip
+% Uso: \begin{tipbox}{Título opcional} Texto \end{tipbox}
+\eps@nuevaalerta{tipbox}{eps-secondary}{\faLightbulb}
+
+% Caja de nota
+% Uso: \begin{notebox}{Título opcional} Texto \end{notebox}
+\eps@nuevaalerta{notebox}{eps-gray}{\faStickyNote}
+
+% ============================================================================
+% CAJAS CON TÍTULO
+% ============================================================================
+
+% Caja con título personalizado
+% Uso: \begin{titlebox}{Título}...\end{titlebox}
+\newtcolorbox{titlebox}[2][]{
+  eps-float-title=eps-primary,
+  title={#2},
+  #1
+}
+
+% Caja de definición
+% Uso: \begin{definitionbox}{Término}...\end{definitionbox}
+\newtcolorbox{definitionbox}[2][]{
+  eps-float-title=eps-info,
+  title={\faBook~#2},
+  #1
+}
+
+% Caja de ejemplo
+% Uso: \begin{examplebox}[título opcional]...\end{examplebox}
+\newtcolorbox{examplebox}[1][\EPSsegunidioma{Ejemplo}{Exemple}{Example}]{
+  eps-float-title=eps-success,
+  title={\faFlask~#1},
+}
+
+% Caja de importante
+% Uso: \begin{importantbox}[título opcional]...\end{importantbox}
+\newtcolorbox{importantbox}[1][\EPSsegunidioma{Importante}{Important}{Important}]{
+  eps-float-title=eps-warning,
+  title={\faExclamationCircle~#1},
+}
+
+% ============================================================================
+% LISTAS ESPECIALES
+% ============================================================================
+
+% Checklist con casillas. En el PDF etiquetado cada casilla se lee como texto
+% («Hecho», «Pendiente», «En curso») en lugar de como un icono sin nombre.
+\newcommand{\checked}{\EPSiconoTexto{\EPSsegunidioma{Hecho}{Fet}{Done}}{{\color{eps-success}\faCheckSquare}}}
+\newcommand{\unchecked}{\EPSiconoTexto{\EPSsegunidioma{Pendiente}{Pendent}{Pending}}{{\color{eps-gray!50}\faSquare}}}
+\newcommand{\partialchecked}{\EPSiconoTexto{\EPSsegunidioma{En curso}{En curs}{In progress}}{{\color{eps-warning}\faMinusSquare}}}
+
+% Los \item sin etiqueta muestran la casilla vacía en cualquier nivel.
+\newenvironment{checklist}{%
+  \begin{itemize}[label=\unchecked, leftmargin=1.5em]
+}{%
+  \end{itemize}
+}
+
+% Lista de pros y contras
+\newcommand{\pro}{\item[\EPSiconoTexto{\EPSsegunidioma{Ventaja}{Avantatge}{Pro}}{{\color{eps-success}\faPlusCircle}}]}
+\newcommand{\con}{\item[\EPSiconoTexto{\EPSsegunidioma{Inconveniente}{Inconvenient}{Con}}{{\color{eps-danger}\faMinusCircle}}]}
+
+\newenvironment{proscons}{%
+  \begin{itemize}[leftmargin=1.5em]
+}{%
+  \end{itemize}
+}
+
+% Lista de pasos numerados (procedimiento)
+% Uso: \begin{steplist} \step ... \end{steplist}
+\newcounter{stepcount}
+\newcommand{\stepval}[1]{%
+  \tikz[baseline=(char.base)]{
+    \node[shape=circle, fill=eps-primary, inner sep=1.5pt, text=white,
+          font=\bfseries\footnotesize, minimum size=1.2em] (char) {#1};
+  }%
+}
+\newcommand{\step}{%
+  \stepcounter{stepcount}%
+  \item[\stepval{\thestepcount}]%
+}
+
+\newenvironment{steplist}{%
+  \setcounter{stepcount}{0}%
+  \begin{itemize}[leftmargin=2.5em, itemsep=0.5em]
+}{%
+  \end{itemize}
+}
+
+% ============================================================================
+% ENCABEZADOS CON ICONO (uso interno de los módulos)
+% ============================================================================
+
+% Define un entorno centrado con un encabezado «icono + título» (sin caja).
+% \eps@nuevoencabezadoicono{entorno}{título por defecto}{icono}
+% Genera: \begin{entorno}[título] ... \end{entorno}
+\newcommand{\eps@nuevoencabezadoicono}[3]{%
+  \newenvironment{#1}[1][#2]{%
+    \begin{center}
+    {\small\bfseries#3\hspace{0.5em}##1}
+    \par\vspace{4pt}
+  }{%
+    \end{center}
+  }%
+}
+
+% ============================================================================
+% ETIQUETAS Y BADGES
+% ============================================================================
+
+% Estilo base para badges usando TikZ para armonización
+% (Reemplaza al anterior tcbox para permitir transparencia y bordes)
+\newcommand{\badge}[2][eps-primary]{%
+  \begin{tikzpicture}[baseline=-0.25em]
+    \node[
+      draw=#1,
+      fill=#1!10,
+      text=#1,
+      rounded corners=2pt,
+      inner sep=2pt,
+      font=\sffamily\bfseries\tiny
+    ] {#2};
+  \end{tikzpicture}%
+}
+
+% Badges predefinidos (usan el nuevo estilo automáticamente)
+\newcommand{\badgenew}{\badge[eps-success]{NUEVO}}
+\newcommand{\badgewip}{\badge[eps-warning]{EN PROGRESO}}
+\newcommand{\badgedeprecated}{\badge[eps-danger]{OBSOLETO}}
+\newcommand{\badgebeta}{\badge[eps-info]{BETA}}
+\newcommand{\badgerequired}{\badge[eps-danger]{REQUERIDO}}
+\newcommand{\badgeoptional}{\badge[eps-gray]{OPCIONAL}}
+
+% Estado de versión
+\newcommand{\version}[1]{%
+  \badge[eps-secondary]{v#1}%
+}
+
+% ============================================================================
+% COMPARATIVAS Y DIFERENCIAS
+% ============================================================================
+
+% Tabla comparativa
+\newenvironment{comparison}[2]{%
+  \begingroup
+  \small
+  \setlength{\tabcolsep}{12pt}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{center}
+  \begin{tabular}{@{} l c c @{}}
+    \toprule
+    \textbf{Criterio} & \textbf{\color{eps-primary} #1} & \textbf{\color{eps-primary} #2} \\
+    \midrule
+}{%
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \endgroup
+}
+
+\newcommand{\comprow}[3]{ \textbf{#1} & #2 & #3 \\ }
+
+% ============================================================================
+% CITAS Y REFERENCIAS DESTACADAS
+% ============================================================================
+
+% Cita destacada reimplementada con tcolorbox para mejor soporte de page breaks y estilos
+\newtcolorbox{quotebox}[1][]{
+  enhanced,
+  boxrule=0pt,
+  frame hidden,
+  colback=eps-gray!5,
+  borderline west={3pt}{0pt}{eps-secondary},
+  fontupper=\itshape,
+  before upper={\textcolor{eps-secondary}{\faQuoteLeft}~},
+  after upper={~\textcolor{eps-secondary}{\faQuoteRight}\ifstrempty{#1}{}{\par\vspace{0.3em}\hfill{\normalfont\footnotesize\textemdash~#1}}},
+  arc=0pt,
+  outer arc=0pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+% ============================================================================
+% INDICADORES Y MÉTRICAS
+% ============================================================================
+
+% Indicador de progreso
+% \progressbar[ancho]{porcentaje}
+\newcommand{\progressbar}[2][5cm]{%
+  \begingroup
+  \tracinglostchars=0
+  \begin{tikzpicture}[baseline=-0.3em]
+      \fill[eps-gray!10, rounded corners=2pt] (0,0) rectangle (#1, 0.4);
+      \fill[eps-primary, rounded corners=2pt] (0,0) rectangle ({#1*#2/100}, 0.4);
+      \node[font=\sffamily\tiny\bfseries, text=white, anchor=east] at ({#1*#2/100 - 2pt}, 0.2) {#2\%};
+  \end{tikzpicture}%
+  \endgroup
+}
+
+% Indicador de rating
+\ExplSyntaxOn
+% En el PDF etiquetado se lee como «4 de 5» (o «4 out of 5»)
+\NewDocumentCommand{\rating}{mm}
+  {
+    \EPSiconoTexto { #1~\EPSsegunidioma{de}{de}{out~of}~#2 }
+      {
+        \int_step_inline:nn { #2 }
+          {
+            \int_compare:nNnTF { ##1 } > { #1 }
+              { \textcolor{eps-gray!20}{\faStar} }
+              { \textcolor{eps-warning}{\faStar} }
+          }
+      }
+  }
+\ExplSyntaxOff
+
+% Indicador de nivel (bloques)
+\ExplSyntaxOn
+\NewDocumentCommand{\levelbar}{mm}
+  {
+    \begingroup
+    \tracinglostchars=0
+    \begin{tikzpicture}[baseline=-0.3em]
+      \int_step_inline:nn { #2 }
+        {
+          \fill [
+            \int_compare:nNnTF { ##1 } > { #1 } { eps-gray!20 } { eps-primary },
+            rounded~corners=1pt
+          ] ( \fp_to_decimal:n { (##1 - 1) * 0.35 }, 0 ) rectangle ++(0.25, 0.4);
+        }
+    \end{tikzpicture}
+    \endgroup
+  }
+\ExplSyntaxOff
+
+% ============================================================================
+% TARJETAS DE INFORMACIÓN
+% ============================================================================
+
+% Tarjeta de persona (estilo Card)
+\newcommand{\personcard}[3]{%
+  \tcbox[
+    enhanced,
+    frame style={color=eps-gray!20},
+    colback=white,
+    colframe=eps-gray!20,
+    boxrule=0.5pt,
+    drop shadow={opacity=0.05, xshift=1pt, yshift=-1pt},
+    arc=4pt,
+    left=10pt, right=10pt, top=10pt, bottom=10pt,
+    boxsep=0pt
+  ]{%
+    \begin{minipage}{0.35\textwidth}
+      \centering
+      \textcolor{eps-primary}{\Huge\faUserCircle}\\[0.5em]
+      {\bfseries\large #1}\\[0.2em]
+      {\small\textcolor{eps-gray}{\bfseries #2}}\\[0.5em]
+      {\footnotesize\itshape #3}
+    \end{minipage}%
+  }%
+}
+
+% Tarjeta de estadística
+% \statcard{Valor}{Etiqueta}{Icono}{Color}
+\newcommand{\statcard}[4]{%
+  \tcbox[
+    enhanced,
+    colback=white,
+    colframe=white,
+    boxrule=0pt,
+    drop shadow={opacity=0.1},
+    arc=4pt,
+    left=6pt, right=6pt, top=6pt, bottom=6pt
+  ]{%
+    \begin{minipage}{0.2\textwidth}
+      \centering
+      \textcolor{#4}{\huge #3}\\[0.2em]
+      {\bfseries\Large #1}\\[0.1em]
+      {\scriptsize\sffamily\color{eps-gray} #2}
+    \end{minipage}%
+  }%
+}
+
+% ============================================================================
+% TIMELINE/CRONOLOGÍA
+% ============================================================================
+
+% Timeline con línea vertical continua a la izquierda.
+% La primera línea de cada elemento queda alineada verticalmente con su badge
+% y la línea vertical se ajusta a la cantidad de líneas del contenido.
+% Uso: \begin{timeline}
+%        \timeitem{2024}{Descripción del hito}
+%      \end{timeline}
+\newenvironment{timeline}{%
+  \begin{tcolorbox}[
+    breakable,
+    enhanced,
+    frame hidden,
+    colback=white,
+    left=3.5cm,   % Espacio para badge
+    boxsep=0pt,
+    top=0.5em, bottom=0.5em,
+    % Línea vertical CONTINUA a la izquierda
+    borderline west={1.5pt}{1.3cm}{eps-primary!30}
+  ]
+}{%
+  \end{tcolorbox}
+}
+
+\newcommand{\timeitem}[2]{%
+  \par
+  % Aseguramos que estamos en modo horizontal al inicio del párrafo para el anclaje
+  \noindent
+  % STRUT para fijar la altura de la primera línea y que la alineación sea consistente
+  \strut
+  \begin{tikzpicture}[remember picture, overlay]
+     % El origen (0,0) es la baseline del inicio del texto.
+     % La línea vertical del box está a 1.3cm del borde izquierdo del frame.
+     % El contenido (texto) empieza a 3.5cm del borde izquierdo.
+     % Distancia del texto a la línea = 3.5 - 1.3 = 2.2cm hacia la izquierda.
+
+     % Alineación vertical: Centrado en la 'x-height' de la fuente (aprox 0.3-0.4em sobre baseline)
+     \node[anchor=center] at (-2.2cm, 0.3em) {%
+        \badge[eps-primary]{#1}%
+     };
+
+     % Opcional: Punto/Círculo sobre la línea para marcar el hito exacto
+     \fill[white] (-2.2cm, 0.3em) circle (2pt); % Hueco línea
+     \fill[eps-primary] (-2.2cm, 0.3em) circle (1.5pt); % Punto
+  \end{tikzpicture}%
+  % Texto del item
+  #2\par
+  % Espacio tras el párrafo para separar del siguiente.
+  % La línea vertical del box cubrirá este espacio, uniéndolo al siguiente.
+  \vspace{1.5em}
+}
